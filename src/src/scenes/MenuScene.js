@@ -18,6 +18,16 @@ export default class MenuScene extends Phaser.Scene {
     glow(this, east, CONFIG.colors.eastUnit, 8);
     this.tweens.add({ targets: [west, east], y: '+=12', yoyo: true, repeat: -1, duration: 1600, ease: 'Sine.inOut' });
 
+    // tombol layar penuh (membantu di HP)
+    const fsBtn = this.add.text(CONFIG.width - 20, 18, '⛶ Layar Penuh', {
+      fontFamily: CONFIG.fonts.body, fontSize: '18px', color: '#9fd0ff', fontStyle: 'bold'
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    fsBtn.on('pointerdown', () => {
+      if (this.scale.isFullscreen) this.scale.stopFullscreen();
+      else this.scale.startFullscreen();
+      try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* abaikan */ }
+    });
+
     const title = heading(this, cx, 180, 'LEGION TD', 84, '#ffffff');
     glow(this, title, CONFIG.colors.accent, 10);
     const sub = heading(this, cx, 248, 'WEB CLONE', 30, '#7dd3fc');

@@ -238,7 +238,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   updateWaveInfo() {
-    const comp = this.getWaveComposition(this.wave);
+    const comp = this.getWaveComposition(this.wave).concat(this.buildWaveExtras(this.wave));
     const hpMult = this.waveHpMult(this.wave);
     const counts = {};
     comp.forEach(k => counts[k] = (counts[k] || 0) + 1);
@@ -532,6 +532,19 @@ export default class GameScene extends Phaser.Scene {
     return 1 + (waveNum - 1) * CONFIG.creepScale.dmgPerWave;
   }
 
+  // jumlah creep ekstra (tumbuh eksponensial) yang ditambahkan ke KEDUA lane tiap wave
+  waveExtraCount(waveNum) {
+    const { base, growth, cap } = CONFIG.waveExtra;
+    return Math.min(cap, Math.round(base * Math.pow(growth, waveNum - 1)));
+  }
+  // tipe creep ekstra ikut menguat seiring wave
+  waveExtraKey(waveNum) {
+    return waveNum >= 12 ? 'brute' : waveNum >= 6 ? 'armored' : 'basic';
+  }
+  buildWaveExtras(waveNum) {
+    return Array(this.waveExtraCount(waveNum)).fill(this.waveExtraKey(waveNum));
+  }
+
   startFight() {
     this.phase = 'fight';
     this.spawnTimer = 0;
@@ -539,12 +552,13 @@ export default class GameScene extends Phaser.Scene {
     const comp = this.getWaveComposition(this.wave);
     const hpMult = this.waveHpMult(this.wave);
     const dmgMult = this.waveDmgMult(this.wave);
+    const extras = this.buildWaveExtras(this.wave); // sama untuk kedua lane
 
     for (const lane of [this.playerLane, this.enemyLane]) {
       lane.kills = 0;
       lane.path = lane.board.getPath();
-      // gabung wave dasar + creep kiriman, lalu reset kiriman
-      const all = comp.concat(lane.pendingSends);
+      // gabung wave dasar + creep ekstra (skala wave) + creep kiriman, lalu reset kiriman
+      const all = comp.concat(extras).concat(lane.pendingSends);
       lane.queue = all.map(key => ({ key, hpMult, dmgMult }));
       lane.pendingSends = [];
     }

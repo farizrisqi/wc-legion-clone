@@ -62,5 +62,8 @@ export const CONFIG = {
     },
     // scaling creep tiap wave (kumulatif) — berlaku untuk kedua lane (kamu & AI)
     creepScale: { hpPerWave: 0.08, dmgPerWave: 0.05 },
-    timings: { prepPhase: 12000, fightSpawnDelay: 500, waveComplete: 2000 }
+    // creep ekstra otomatis yang ditambahkan ke KEDUA lane tiap wave; jumlah tumbuh eksponensial
+    // count = round(base * growth^(wave-1)), dibatasi cap
+    waveExtra: { base: 2, growth: 1.3, cap: 80 },
+    timings: { prepPhase: 30000, fightSpawnDelay: 500, waveComplete: 2000 }
   };
