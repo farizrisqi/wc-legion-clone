@@ -32,6 +32,8 @@ export default class Unit {
     const p = board.cellToPixel(col, row);
     this.x = p.x;
     this.y = p.y;
+    this.homeX = p.x; // posisi asal — unit kembali ke sini setelah ronde
+    this.homeY = p.y;
     this.color = (RACES[faction] && RACES[faction].color) || CONFIG.colors.westUnit;
     const s = CONFIG.grid.cellSize - 5;
     this.s = s;
@@ -109,7 +111,7 @@ export default class Unit {
     this.hpBarBg.setVisible(false);
   }
 
-  // dipanggil tiap awal ronde: hidupkan kembali dengan HP penuh
+  // dipanggil tiap awal ronde: hidupkan kembali, tween balik ke posisi asal
   respawn() {
     this.alive = true;
     this.hp = this.maxHp;
@@ -118,6 +120,13 @@ export default class Unit {
     this.label.setAlpha(1);
     this.hpBar.setVisible(false);
     this.hpBarBg.setVisible(false);
+    // tween kembali ke posisi asal dengan smooth
+    this.scene.tweens.add({
+      targets: this,
+      x: this.homeX, y: this.homeY,
+      duration: 600, ease: 'Quad.inOut',
+      onUpdate: () => this.updateVisualPositions()
+    });
   }
 
   // range dalam pixel (range tile * cellSize + sedikit margin)
@@ -125,24 +134,52 @@ export default class Unit {
     return this.stats.range * CONFIG.grid.cellSize + 8;
   }
 
-  update(delta, creeps) {
-    if (!this.alive) return; // unit mati tidak menyerang
-    this.attackTimer -= delta;
-    if (this.attackTimer > 0) return;
+  updateVisualPositions() {
+    this.rect.setPosition(this.x, this.y);
+    this.label.setPosition(this.x, this.y);
+    this.tierBadge.setPosition(this.x + this.s / 2 - 2, this.y + this.s / 2 - 2);
+    this.hpBarBg.setPosition(this.x, this.y - this.s / 2 - 5);
+    this.hpBar.setPosition(this.x - this.hpBarW / 2, this.y - this.s / 2 - 5);
+  }
 
-    // cari creep terdekat dalam range
-    let target = null;
-    let best = Infinity;
-    const r = this.rangePx();
+  moveTowards(tx, ty, delta) {
+    const dx = tx - this.x, dy = ty - this.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 2) return;
+    const step = 65 * (delta / 1000); // 65 px/s
+    if (dist <= step) { this.x = tx; this.y = ty; }
+    else { this.x += (dx / dist) * step; this.y += (dy / dist) * step; }
+    this.updateVisualPositions();
+  }
+
+  update(delta, creeps) {
+    if (!this.alive) return;
+    this.attackTimer -= delta;
+
+    // cari creep terdekat (tidak peduli jangkauan dulu)
+    let nearest = null, nearestDist = Infinity;
     for (const c of creeps) {
       if (c.dead) continue;
       const d = Phaser.Math.Distance.Between(this.x, this.y, c.x, c.y);
-      if (d <= r && d < best) { best = d; target = c; }
+      if (d < nearestDist) { nearestDist = d; nearest = c; }
     }
-    if (!target) return;
 
-    this.fire(target, creeps);
-    this.attackTimer = 1000 / this.stats.atkSpeed;
+    if (!nearest) {
+      // tidak ada musuh — balik ke posisi asal
+      this.moveTowards(this.homeX, this.homeY, delta);
+      return;
+    }
+
+    if (nearestDist <= this.rangePx()) {
+      // musuh dalam jangkauan: serang kalau timer siap
+      if (this.attackTimer <= 0) {
+        this.fire(nearest, creeps);
+        this.attackTimer = 1000 / this.stats.atkSpeed;
+      }
+    } else {
+      // musuh di luar jangkauan: kejar
+      this.moveTowards(nearest.x, nearest.y, delta);
+    }
   }
 
   fire(target, creeps) {
