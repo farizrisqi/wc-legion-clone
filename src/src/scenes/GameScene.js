@@ -662,8 +662,6 @@ export default class GameScene extends Phaser.Scene {
     if (!path) return null;
 
     const spawnCol = board.spawn.col; // col 3
-    const isRanged = stats.range >= 3;
-    const midRow = Math.floor(board.rows / 2); // row 4
     const prefCols = new Set([spawnCol - 1, spawnCol, spawnCol + 1]); // cols 2,3,4
 
     const cands = [];
@@ -680,9 +678,11 @@ export default class GameScene extends Phaser.Scene {
         let score = 0;
         // prioritas utama: kolom dekat jalur spawn–king (blocking paling efektif)
         if (prefCols.has(c)) score += 10;
-        // posisi baris: melee depan, ranged belakang
-        if (!isRanged && r < midRow) score += 5;
-        if (isRanged && r >= midRow) score += 5;
+        // bonus clustering: makin dekat unit sesama tipe makin bagus
+        for (const u of board.units) {
+          const ud = Math.abs(u.col - c) + Math.abs(u.row - r);
+          if (ud <= 2) score += (3 - ud); // jarak 1: +2, jarak 2: +1
+        }
         // bonus kecil: makin dekat jalur creep makin baik
         score -= dmin;
 
