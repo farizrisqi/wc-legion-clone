@@ -23,6 +23,9 @@ export default class Creep {
     this.slowTimer = 0;
     this.poisonDps = 0;
     this.poisonTimer = 0;
+    this.rootTimer = 0;       // freeze total (ensnare/web)
+    this.curseTimer = 0;      // armor debuff (curse/banshee)
+    this.curseAmount = 0;
 
     // stat menyerang unit (ikut scaling wave)
     this.dmg = Math.round((stats.dmg || 0) * dmgMult);
@@ -59,8 +62,19 @@ export default class Creep {
   }
 
   applyPoison(dps, duration) {
-    this.poisonDps = dps;
-    this.poisonTimer = duration;
+    this.poisonDps = Math.max(this.poisonDps, dps); // ambil yang lebih kuat
+    this.poisonTimer = Math.max(this.poisonTimer, duration);
+  }
+
+  applyRoot(duration) {
+    this.rootTimer = Math.max(this.rootTimer, duration);
+  }
+
+  applyCurse(amount, duration) {
+    if (this.curseTimer > 0) return; // tidak stack
+    this.curseAmount = Math.min(amount, this.armor);
+    this.armor -= this.curseAmount;
+    this.curseTimer = duration;
   }
 
   // unit hidup terdekat dalam jangkauan serang creep
@@ -121,6 +135,22 @@ export default class Creep {
     if (this.slowTimer > 0) {
       this.slowTimer -= delta;
       if (this.slowTimer <= 0) this.slowFactor = 1;
+    }
+    // root (freeze total — ensnare/web)
+    if (this.rootTimer > 0) {
+      this.rootTimer -= delta;
+      this.circle.setAlpha(0.6); // visual: redup saat ter-root
+      return false; // tidak bergerak, tidak menyerang
+    } else {
+      this.circle.setAlpha(1);
+    }
+    // curse armor debuff
+    if (this.curseTimer > 0) {
+      this.curseTimer -= delta;
+      if (this.curseTimer <= 0) {
+        this.armor += this.curseAmount;
+        this.curseAmount = 0;
+      }
     }
 
     if (this.pathIndex >= this.path.length) { // sampai goal -> leak (prioritas)

@@ -90,6 +90,8 @@ export default class Unit {
 
   takeDamage(dmg) {
     if (!this.alive) return;
+    // block: 30% chance kurangi 50% damage masuk
+    if (this.stats.special === 'block' && Math.random() < 0.3) dmg *= 0.5;
     this.hp -= dmg;
     if (this.hp <= 0) { this.die(); return; }
     // tampilkan & update HP bar
@@ -144,25 +146,94 @@ export default class Unit {
   }
 
   fire(target, creeps) {
-    // visual tembakan: garis singkat yang memudar
-    const line = this.scene.add.line(0, 0, this.x, this.y, target.x, target.y, 0xffffff, 0.8)
-      .setOrigin(0, 0).setLineWidth(1.5);
-    this.scene.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
-
-    target.takeDamage(this.dmg);
-
-    // special abilities
     const sp = this.stats.special;
-    if (sp === 'slow') target.applySlow(0.3, 2000);
-    else if (sp === 'poison') target.applyPoison(this.dmg * 0.6, 3000);
-    else if (sp === 'splash' || sp === 'cleave') {
-      // damage setengah ke creep dalam 1 tile dari target
+
+    // warna garis serangan berdasarkan skill
+    const lineColor =
+      sp === 'poison' || sp === 'disease' ? 0x4ade80 :
+      sp === 'slow' || sp === 'ensnare' || sp === 'web' ? 0x93c5fd :
+      sp === 'curse' ? 0xc084fc :
+      sp === 'pierce' ? 0xfde047 :
+      sp === 'crit' ? 0xff4444 :
+      0xffffff;
+
+    const drawLine = (tx, ty) => {
+      const l = this.scene.add.line(0, 0, this.x, this.y, tx, ty, lineColor, 0.85)
+        .setOrigin(0, 0).setLineWidth(1.5);
+      this.scene.tweens.add({ targets: l, alpha: 0, duration: 150, onComplete: () => l.destroy() });
+    };
+    drawLine(target.x, target.y);
+
+    // damage dasar ke target
+    let dmg = this.dmg;
+    if (sp === 'crit' && Math.random() < 0.25) dmg *= 2.5; // crit dihitung dulu
+    target.takeDamage(dmg);
+
+    // efek skill
+    if (sp === 'slow')      target.applySlow(0.35, 2500);
+    else if (sp === 'poison')   target.applyPoison(this.dmg * 0.6, 3000);
+    else if (sp === 'ensnare')  target.applyRoot(1500);
+    else if (sp === 'web')      target.applyRoot(2000);
+    else if (sp === 'curse')    target.applyCurse(8, 3000);
+    else if (sp === 'pulverize' && Math.random() < 0.4) target.applySlow(0.5, 3000);
+    else if (sp === 'devour') {
+      // heal unit sebesar 25% dari dmg didealt
+      this.hp = Math.min(this.maxHp, this.hp + this.dmg * 0.25);
+      const pct = this.hp / this.maxHp;
+      this.hpBarBg.setVisible(true);
+      this.hpBar.setVisible(pct < 1).width = this.hpBarW * pct;
+      this.hpBar.fillColor = pct < 0.3 ? CONFIG.colors.hpLow : pct < 0.6 ? CONFIG.colors.hpMid : CONFIG.colors.hpFull;
+      if (pct >= 1) { this.hpBarBg.setVisible(false); this.hpBar.setVisible(false); }
+    }
+    else if (sp === 'splash') {
       for (const c of creeps) {
         if (c === target || c.dead) continue;
-        if (Phaser.Math.Distance.Between(target.x, target.y, c.x, c.y) <= CONFIG.grid.cellSize + 8) {
+        if (Phaser.Math.Distance.Between(target.x, target.y, c.x, c.y) <= CONFIG.grid.cellSize * 1.5) {
           c.takeDamage(this.dmg * 0.5);
         }
       }
+    }
+    else if (sp === 'cleave') {
+      // tebas 2 creep terdekat dari unit (selain target) dengan 60% dmg
+      const others = creeps.filter(c => c !== target && !c.dead)
+        .sort((a, b) => Phaser.Math.Distance.Between(this.x, this.y, a.x, a.y) - Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y))
+        .slice(0, 2);
+      for (const c of others) { drawLine(c.x, c.y); c.takeDamage(this.dmg * 0.6); }
+    }
+    else if (sp === 'stomp') {
+      // slow semua creep dalam radius 2 tile dari unit ini
+      const r2 = CONFIG.grid.cellSize * 2;
+      for (const c of creeps) {
+        if (c.dead) continue;
+        if (Phaser.Math.Distance.Between(this.x, this.y, c.x, c.y) <= r2) c.applySlow(0.5, 2500);
+      }
+    }
+    else if (sp === 'pierce') {
+      // peluru menembus semua creep yang ada di garis antara unit dan target
+      const dx = target.x - this.x, dy = target.y - this.y;
+      const len2 = dx * dx + dy * dy;
+      for (const c of creeps) {
+        if (c === target || c.dead) continue;
+        const t = ((c.x - this.x) * dx + (c.y - this.y) * dy) / len2;
+        if (t < 0 || t > 1.1) continue;
+        const px = this.x + t * dx, py = this.y + t * dy;
+        if (Math.hypot(c.x - px, c.y - py) <= 18) c.takeDamage(this.dmg);
+      }
+    }
+    else if (sp === 'disease') {
+      // sebarkan poison setengah kekuatan ke creep adjacent target
+      for (const c of creeps) {
+        if (c === target || c.dead) continue;
+        if (Phaser.Math.Distance.Between(target.x, target.y, c.x, c.y) <= CONFIG.grid.cellSize + 4) {
+          c.applyPoison(this.dmg * 0.3, 3000);
+        }
+      }
+    }
+    else if (sp === 'multishot') {
+      // tembak creep kedua terdekat sekaligus
+      const second = creeps.filter(c => c !== target && !c.dead)
+        .sort((a, b) => Phaser.Math.Distance.Between(this.x, this.y, a.x, a.y) - Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y))[0];
+      if (second) { drawLine(second.x, second.y); second.takeDamage(this.dmg); }
     }
   }
 
