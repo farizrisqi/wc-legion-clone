@@ -653,35 +653,48 @@ export default class GameScene extends Phaser.Scene {
     return true;
   }
 
-  // Pilih sel terbaik untuk AI: menempel jalur creep & dalam jangkauan unit.
+  // Pilih sel terbaik untuk AI:
+  // - prioritas kolom sejajar spawn-king ± 1 (paling efektif blocking path)
+  // - melee (range 2): baris depan dekat spawn; ranged (range 3): baris belakang dekat king
   pickAICell(stats) {
     const board = this.enemyBoard;
     const path = board.getPath();
     if (!path) return null;
-    const maxDist = Math.max(1, stats.range); // ranged boleh agak jauh dari jalur
+
+    const spawnCol = board.spawn.col; // col 3
+    const isRanged = stats.range >= 3;
+    const midRow = Math.floor(board.rows / 2); // row 4
+    const prefCols = new Set([spawnCol - 1, spawnCol, spawnCol + 1]); // cols 2,3,4
+
     const cands = [];
     for (let r = 0; r < board.rows; r++) {
       for (let c = 0; c < board.cols; c++) {
         if (!board.canPlace(c, r)) continue;
+
         let dmin = Infinity;
         for (const p of path) {
           const d = Math.abs(p.col - c) + Math.abs(p.row - r);
           if (d < dmin) dmin = d;
         }
-        if (dmin >= 1 && dmin <= maxDist) cands.push({ col: c, row: r, score: dmin });
+
+        let score = 0;
+        // prioritas utama: kolom dekat jalur spawn–king (blocking paling efektif)
+        if (prefCols.has(c)) score += 10;
+        // posisi baris: melee depan, ranged belakang
+        if (!isRanged && r < midRow) score += 5;
+        if (isRanged && r >= midRow) score += 5;
+        // bonus kecil: makin dekat jalur creep makin baik
+        score -= dmin;
+
+        cands.push({ col: c, row: r, score });
       }
     }
+
     if (cands.length === 0) return null;
-    // utamakan yang paling dekat jalur, pilih acak di antara yang terbaik
-    cands.sort((a, b) => a.score - b.score);
-    const best = cands.filter(c => c.score <= cands[0].score + 1);
-    // sel di 3 baris dekat king diberi bobot 4× agar AI lebih sering bertahan di sana
-    const weighted = [];
-    for (const c of best) {
-      const w = c.row >= board.rows - 3 ? 4 : 1;
-      for (let i = 0; i < w; i++) weighted.push(c);
-    }
-    return weighted[Phaser.Math.Between(0, weighted.length - 1)];
+    cands.sort((a, b) => b.score - a.score);
+    // pilih acak dari kandidat top (dalam margin 3 poin dari terbaik)
+    const best = cands.filter(c => c.score >= cands[0].score - 3);
+    return best[Phaser.Math.Between(0, best.length - 1)];
   }
 
   // ---------- Update loop ----------
