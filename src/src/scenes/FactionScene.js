@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config.js';
-import { UNITS, RACES } from '../data/unit.js';
+import { UNITS, RACES, SKILL_DESC } from '../data/unit.js';
 import { gradientBg, glow, heading, body } from '../ui/UI.js';
 
 export default class FactionScene extends Phaser.Scene {
@@ -49,11 +49,20 @@ export default class FactionScene extends Phaser.Scene {
     c.add(this.add.text(0, -85, race.name, { fontFamily: CONFIG.fonts.heading, fontSize: '26px', color: hex, fontStyle: 'bold' }).setOrigin(0.5));
     c.add(this.add.text(0, -55, race.theme, { fontFamily: CONFIG.fonts.body, fontSize: '15px', color: '#8b97bd' }).setOrigin(0.5));
 
-    // daftar unit dari data
+    // daftar unit + desc skill
     Object.values(UNITS[raceKey]).forEach((u, i) => {
-      const sp = u.special ? `  ★${u.special}` : '';
-      c.add(this.add.text(-w / 2 + 28, -20 + i * 32, `${u.name}  (${u.cost}g)${sp}`, {
-        fontFamily: CONFIG.fonts.body, fontSize: '16px', color: '#c3cdee'
+      const yOff = -18 + i * 42;
+      c.add(this.add.text(-w / 2 + 20, yOff, `${u.name}`, {
+        fontFamily: CONFIG.fonts.body, fontSize: '15px', color: '#e2e8f0', fontStyle: 'bold'
+      }));
+      c.add(this.add.text(w / 2 - 14, yOff + 1, `${u.cost}g`, {
+        fontFamily: CONFIG.fonts.heading, fontSize: '13px', color: '#fde68a', fontStyle: 'bold'
+      }).setOrigin(1, 0));
+      const descText = u.special ? `★ ${SKILL_DESC[u.special] || u.special}` : 'Serangan biasa';
+      const descColor = u.special ? '#fbbf24' : '#4b5a7a';
+      c.add(this.add.text(-w / 2 + 20, yOff + 18, descText, {
+        fontFamily: CONFIG.fonts.body, fontSize: '12px', color: descColor,
+        wordWrap: { width: w - 32 }
       }));
     });
 

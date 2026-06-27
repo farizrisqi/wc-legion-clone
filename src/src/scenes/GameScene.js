@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config.js';
-import { UNITS, RACES } from '../data/unit.js';
+import { UNITS, RACES, SKILL_DESC } from '../data/unit.js';
 import { CREEPS } from '../data/creeps.js';
 import { WAVES } from '../data/waves.js';
 import Board from '../game/Board.js';
@@ -135,10 +135,15 @@ export default class GameScene extends Phaser.Scene {
       const icon = this.add.image(x + 30, this.shopY + this.shopH / 2, 'roundsquare').setDisplaySize(36, 36).setTint(color);
       this.add.text(x + 56, this.shopY + 12, stats.name, { fontFamily: CONFIG.fonts.heading, fontSize: '15px', color: '#e6edff', fontStyle: 'bold' });
       this.add.text(x + 56, this.shopY + 36, `DMG ${stats.dmg}  •  RNG ${stats.range}`, { fontFamily: CONFIG.fonts.body, fontSize: '13px', color: '#9aa6cc' });
-      this.add.text(x + 56, this.shopY + 56, stats.special ? `★ ${stats.special}` : 'serangan biasa', { fontFamily: CONFIG.fonts.body, fontSize: '12px', color: stats.special ? '#fbbf24' : '#6b779c' });
-      // badge harga
+      // tampilkan nama skill, tooltip muncul saat hover
+      const skillLabel = stats.special ? `★ ${stats.special.charAt(0).toUpperCase() + stats.special.slice(1)}` : 'Serangan biasa';
+      this.add.text(x + 56, this.shopY + 56, skillLabel, { fontFamily: CONFIG.fonts.body, fontSize: '12px', color: stats.special ? '#fbbf24' : '#6b779c' });
       const badgeX = x + bw - 16;
       this.add.text(badgeX, this.shopY + 10, `${stats.cost}g`, { fontFamily: CONFIG.fonts.heading, fontSize: '16px', color: '#fde68a', fontStyle: 'bold' }).setOrigin(1, 0);
+      // zone interaktif untuk hover tooltip
+      const zone = this.add.zone(x, this.shopY, bw, this.shopH).setOrigin(0).setInteractive();
+      zone.on('pointerover', () => this.showSkillTooltip(stats, x));
+      zone.on('pointerout', () => this.hideSkillTooltip());
       this.shopButtons.push({ stats, x, bw, icon });
     });
 
@@ -149,6 +154,29 @@ export default class GameScene extends Phaser.Scene {
     this.add.text(CONFIG.width / 2, this.shopY + this.shopH + 14,
       'Klik unit → klik petak untuk menaruh   •   Klik unit terpasang = upgrade / jual',
       { fontFamily: CONFIG.fonts.body, fontSize: '13px', color: '#6b779c' }).setOrigin(0.5, 0);
+  }
+
+  showSkillTooltip(stats, bx) {
+    this.hideSkillTooltip();
+    if (!stats.special) return;
+    const desc = SKILL_DESC[stats.special] || stats.special;
+    const tw = 250, th = 62;
+    const tx = Math.min(bx, CONFIG.width - tw - 8);
+    const ty = this.shopY - th - 10;
+    const objs = [];
+    objs.push(panel(this, tx, ty, tw, th, { radius: 10, fill: 0x0a0f20, fillAlpha: 0.98, stroke: CONFIG.colors.gold, strokeWidth: 1.5 }));
+    objs.push(this.add.text(tx + 10, ty + 8, `★ ${stats.name} — ${stats.special.charAt(0).toUpperCase() + stats.special.slice(1)}`, {
+      fontFamily: CONFIG.fonts.heading, fontSize: '13px', color: '#fde68a', fontStyle: 'bold'
+    }));
+    objs.push(this.add.text(tx + 10, ty + 30, desc.split(' — ')[1] || desc, {
+      fontFamily: CONFIG.fonts.body, fontSize: '13px', color: '#c3cdee', wordWrap: { width: tw - 20 }
+    }));
+    objs.forEach(o => o.setDepth(500));
+    this.skillTooltipObjs = objs;
+  }
+
+  hideSkillTooltip() {
+    if (this.skillTooltipObjs) { this.skillTooltipObjs.forEach(o => o.destroy()); this.skillTooltipObjs = null; }
   }
 
   highlightShop() {
@@ -371,7 +399,8 @@ export default class GameScene extends Phaser.Scene {
   // ---------- Popup upgrade/jual unit ----------
   openUnitPopup(cell, unit) {
     this.closeUnitPopup();
-    const w = 220, h = 152;
+    const hasSkill = !!unit.stats.special;
+    const w = 220, h = hasSkill ? 172 : 152;
     let x = Phaser.Math.Clamp(unit.x - w / 2, 8, CONFIG.width - w - 8);
     let y = Phaser.Math.Clamp(unit.y - h - 14, 76, CONFIG.height - h - 8);
     const objs = [];
@@ -383,11 +412,20 @@ export default class GameScene extends Phaser.Scene {
 
     objs.push(panel(this, x, y, w, h, { radius: 12, fill: 0x0e1730, fillAlpha: 0.98, stroke: this.playerColor, strokeWidth: 2 }));
     T(x + 14, y + 10, `${unit.stats.name}  T${unit.tier}`, 16, '#ffffff');
-    T(x + 14, y + 34, `HP ${unit.maxHp}    DMG ${unit.dmg}`, 13, '#aab6d8');
+    T(x + 14, y + 32, `HP ${unit.maxHp}    DMG ${unit.dmg}`, 13, '#aab6d8');
+    if (hasSkill) {
+      const desc = SKILL_DESC[unit.stats.special] || unit.stats.special;
+      const skillLabel = unit.stats.special.charAt(0).toUpperCase() + unit.stats.special.slice(1);
+      objs.push(this.add.text(x + 14, y + 50, `★ ${skillLabel} — ${desc.split(' — ')[1] || desc}`, {
+        fontFamily: CONFIG.fonts.body, fontSize: '11px', color: '#fbbf24',
+        wordWrap: { width: w - 28 }
+      }));
+    }
 
     const bw = w - 28, bh = 34;
+    const btnOff = hasSkill ? 20 : 0;
     // tombol upgrade
-    const upB = { x: x + 14, y: y + 58, w: bw, h: bh };
+    const upB = { x: x + 14, y: y + 58 + btnOff, w: bw, h: bh };
     const cost = unit.upgradeCost();
     const canUp = unit.canUpgrade() && this.playerGold >= cost;
     const upG = this.add.graphics();
@@ -396,7 +434,7 @@ export default class GameScene extends Phaser.Scene {
     T(upB.x + bw / 2, upB.y + bh / 2, unit.canUpgrade() ? `Upgrade → T${unit.tier + 1}  (${cost}g)` : 'TIER MAKS', 14, canUp ? '#06121f' : '#8b94ad', [0.5, 0.5]);
 
     // tombol jual
-    const sB = { x: x + 14, y: y + 100, w: bw, h: bh };
+    const sB = { x: x + 14, y: y + 100 + btnOff, w: bw, h: bh };
     const refund = Math.floor(unit.invested * 0.75);
     const sG = this.add.graphics();
     sG.fillStyle(0xef4444, 1); sG.fillRoundedRect(sB.x, sB.y, sB.w, sB.h, 8); objs.push(sG);
@@ -424,12 +462,12 @@ export default class GameScene extends Phaser.Scene {
     const pw = 940, ph = 470;
     const x = CONFIG.width / 2 - pw / 2, y = CONFIG.height / 2 - ph / 2;
     objs.push(panel(this, x, y, pw, ph, { radius: 18, fill: 0x121a30, fillAlpha: 0.99, stroke: CONFIG.colors.accent, strokeWidth: 2 }));
-    objs.push(this.add.text(CONFIG.width / 2, y + 16, 'STATISTIK UNIT  (stat dasar / Tier 1)', {
+    objs.push(this.add.text(CONFIG.width / 2, y + 16, 'UNIT DI PAPAN SAAT INI', {
       fontFamily: CONFIG.fonts.heading, fontSize: '24px', color: '#ffffff', fontStyle: 'bold'
     }).setOrigin(0.5, 0));
 
-    this.addStatsColumn(objs, x + 28, y + 64, this.playerFaction, this.playerColor, 'UNIT-MU');
-    this.addStatsColumn(objs, x + pw / 2 + 8, y + 64, this.aiFaction, this.aiColor, 'UNIT LAWAN');
+    this.addStatsColumn(objs, x + 28, y + 64, this.playerBoard.units, this.playerColor, `MILIKMU — ${RACES[this.playerFaction].name}`);
+    this.addStatsColumn(objs, x + pw / 2 + 8, y + 64, this.enemyBoard.units, this.aiColor, `LAWAN AI — ${RACES[this.aiFaction].name}`);
 
     // info scaling creep saat ini (berlaku untuk kedua lane)
     const hb = Math.round((this.waveHpMult(this.wave) - 1) * 100);
@@ -446,19 +484,27 @@ export default class GameScene extends Phaser.Scene {
     this.statsPopup = objs;
   }
 
-  addStatsColumn(objs, x, y, faction, color, title) {
+  addStatsColumn(objs, x, y, units, color, title) {
     const hex = '#' + color.toString(16).padStart(6, '0');
-    objs.push(this.add.text(x, y, `${title} — ${RACES[faction].name}`, {
+    objs.push(this.add.text(x, y, title, {
       fontFamily: CONFIG.fonts.heading, fontSize: '18px', color: hex, fontStyle: 'bold'
     }));
+    if (units.length === 0) {
+      objs.push(this.add.text(x, y + 32, '(belum ada unit di papan)', {
+        fontFamily: CONFIG.fonts.body, fontSize: '14px', color: '#4b5a7a'
+      }));
+      return;
+    }
     const pad = (s, n) => String(s).padStart(n);
-    const header = `${'Unit'.padEnd(12)}${pad('$', 4)} ${pad('HP', 4)} ${pad('DMG', 4)} ${pad('R', 2)} ${pad('SPD', 4)}  Spesial`;
-    const lines = [header, '─'.repeat(48)];
-    for (const u of Object.values(UNITS[faction])) {
-      lines.push(`${u.name.slice(0, 12).padEnd(12)}${pad(u.cost, 4)} ${pad(u.hp, 4)} ${pad(u.dmg, 4)} ${pad(u.range, 2)} ${pad(u.atkSpeed.toFixed(1), 4)}  ${u.special || '-'}`);
+    const header = `${'Unit'.padEnd(14)}${pad('T', 2)} ${pad('HP', 9)} ${pad('DMG', 4)}  Skill`;
+    const lines = [header, '─'.repeat(52)];
+    for (const u of units) {
+      const hpStr = `${u.hp}/${u.maxHp}`;
+      const sp = u.stats.special ? (u.stats.special.charAt(0).toUpperCase() + u.stats.special.slice(1)) : '-';
+      lines.push(`${u.stats.name.slice(0,14).padEnd(14)}${pad(u.tier,2)} ${pad(hpStr,9)} ${pad(u.dmg,4)}  ${sp}`);
     }
     objs.push(this.add.text(x, y + 30, lines.join('\n'), {
-      fontFamily: 'monospace', fontSize: '14px', color: '#d3dcf5', lineSpacing: 7
+      fontFamily: 'monospace', fontSize: '13px', color: '#d3dcf5', lineSpacing: 7
     }));
   }
 

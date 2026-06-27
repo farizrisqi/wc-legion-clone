@@ -31,6 +31,25 @@ export const UNITS = {
     }
   };
 
+// Deskripsi singkat tiap skill (untuk tooltip & FactionScene)
+export const SKILL_DESC = {
+  block:     'Blok — 30% chance potong 50% damage masuk',
+  pierce:    'Tembus — peluru menembus semua musuh segaris',
+  slow:      'Perlambat — kurangi kecepatan 35% selama 2.5 detik',
+  splash:    'Ledak — AoE 50% dmg radius 1.5 tile dari target',
+  cleave:    'Tebas — hajar target + 2 musuh terdekat (60% dmg)',
+  ensnare:   'Jebak — bekukan musuh 1.5 detik, tidak bisa gerak',
+  poison:    'Racun — DoT 60%×dmg per detik selama 3 detik',
+  stomp:     'Hantam — slow 50% semua musuh dalam radius 2 tile',
+  devour:    'Lahap — pulihkan HP sebesar 25% dari dmg didealt',
+  web:       'Jaring — bekukan musuh selama 2 detik',
+  curse:     'Kutuk — kurangi armor musuh -8 selama 3 detik',
+  disease:   'Wabah — sebarkan racun ke musuh di sekitar target',
+  multishot: 'Ganda — tembak 2 musuh secara bersamaan',
+  crit:      'Kritikal — 25% chance damage 2.5× lipat',
+  pulverize: 'Hancur — 40% chance slow kuat 50% selama 3 detik',
+};
+
 // Metadata ras: nama tampilan, warna unit, tema
 export const RACES = {
     human:    { key: 'human',    name: 'HUMAN',     color: 0x38bdf8, theme: 'Alliance' },
