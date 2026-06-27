@@ -82,9 +82,9 @@ export default class Board {
       y >= this.origin.y && y < this.origin.y + this.rows * this.cellSize;
   }
 
-  // grid biner untuk pathfinding (1 = blocked)
+  // grid biner untuk pathfinding (1 = blocked); unit mati tidak menghalangi
   toGrid(extraBlock) {
-    const grid = this.grid.map(row => row.map(cell => (cell ? 1 : 0)));
+    const grid = this.grid.map(row => row.map(cell => (cell && cell.alive ? 1 : 0)));
     if (extraBlock) grid[extraBlock.row][extraBlock.col] = 1;
     return grid;
   }

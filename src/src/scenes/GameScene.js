@@ -612,7 +612,7 @@ export default class GameScene extends Phaser.Scene {
 
     // 3) Investasi ekonomi: beli wisp dengan sisa gold
     let wb = 0;
-    while (wb++ < 2 && this.aiWisps < 6 && this.aiGold >= CONFIG.economy.wispCost + 20) {
+    while (wb++ < 4 && this.aiWisps < 10 && this.aiGold >= CONFIG.economy.wispCost + 5) {
       this.aiGold -= CONFIG.economy.wispCost;
       this.aiWisps++;
     }
@@ -675,7 +675,13 @@ export default class GameScene extends Phaser.Scene {
     // utamakan yang paling dekat jalur, pilih acak di antara yang terbaik
     cands.sort((a, b) => a.score - b.score);
     const best = cands.filter(c => c.score <= cands[0].score + 1);
-    return best[Phaser.Math.Between(0, best.length - 1)];
+    // sel di 3 baris dekat king diberi bobot 4× agar AI lebih sering bertahan di sana
+    const weighted = [];
+    for (const c of best) {
+      const w = c.row >= board.rows - 3 ? 4 : 1;
+      for (let i = 0; i < w; i++) weighted.push(c);
+    }
+    return weighted[Phaser.Math.Between(0, weighted.length - 1)];
   }
 
   // ---------- Update loop ----------
@@ -704,7 +710,8 @@ export default class GameScene extends Phaser.Scene {
         // spawn satu creep dari queue
         if (spawnedThisFrame && lane.queue.length > 0 && lane.path) {
           const item = lane.queue.shift();
-          lane.creeps.push(new Creep(this, lane.board, CREEPS[item.key], lane.path, item.hpMult, item.dmgMult));
+          const spawnPath = lane.board.getPath() || lane.path;
+          lane.creeps.push(new Creep(this, lane.board, CREEPS[item.key], spawnPath, item.hpMult, item.dmgMult));
         }
         // update unit (attack)
         for (const u of lane.board.units) u.update(delta, lane.creeps);

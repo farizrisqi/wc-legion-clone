@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { findPath } from './Pathfinder.js';
 
 // Creep yang bergerak dari spawn menuju King mengikuti path (array of {col,row}).
 export default class Creep {
@@ -134,6 +135,14 @@ export default class Creep {
         this.scene.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
         unit.takeDamage(this.dmg);
         this.attackTimer = 1000 / this.atkSpeed;
+        // jika unit baru saja mati, repath lewat sel yang kini terbuka
+        if (!unit.alive) {
+          const cell = this.board.pixelToCell(this.x, this.y);
+          if (cell) {
+            const newPath = findPath(this.board.toGrid(), cell, this.board.goal);
+            if (newPath && newPath.length > 1) { this.path = newPath; this.pathIndex = 1; }
+          }
+        }
       }
       return false;
     }
