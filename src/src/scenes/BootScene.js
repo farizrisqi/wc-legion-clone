@@ -16,10 +16,21 @@ export default class BootScene extends Phaser.Scene {
     g.generateTexture('roundsquare', 64, 64);
     g.clear();
 
-    // lingkaran putih (untuk creep)
+    // lingkaran putih (untuk creep melee)
     g.fillStyle(0xffffff, 1);
     g.fillCircle(24, 24, 24);
     g.generateTexture('disc', 48, 48);
+    g.clear();
+
+    // diamond/berlian putih (untuk creep ranged)
+    g.fillStyle(0xffffff, 1);
+    g.fillPoints([
+      { x: 24, y: 1 },
+      { x: 47, y: 24 },
+      { x: 24, y: 47 },
+      { x: 1, y: 24 }
+    ], true);
+    g.generateTexture('diamond', 48, 48);
     g.clear();
 
     g.destroy();

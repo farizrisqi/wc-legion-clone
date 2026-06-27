@@ -41,9 +41,13 @@ export default class Creep {
       stats.key === 'armored' ? 0x94a3b8 :
       stats.key === 'fast' ? 0x5eead4 :
       stats.key === 'swarm' ? 0xfde047 :
+      stats.key === 'archer' ? 0x86efac :
+      stats.key === 'spitter' ? 0xe879f9 :
       CONFIG.colors.creep;
     this.baseColor = baseColor;
-    this.circle = scene.add.image(this.x, this.y, 'disc').setDisplaySize(sz, sz).setTint(baseColor);
+    // ranged = bentuk diamond, melee = lingkaran
+    const texture = (this.range >= 2) ? 'diamond' : 'disc';
+    this.circle = scene.add.image(this.x, this.y, texture).setDisplaySize(sz, sz).setTint(baseColor);
     this.hpBarBg = scene.add.rectangle(this.x, this.y - sz / 2 - 5, sz + 2, 5, 0x000000, 0.6).setOrigin(0.5);
     this.hpBar = scene.add.rectangle(this.x - sz / 2, this.y - sz / 2 - 5, sz, 4, CONFIG.colors.hpFull).setOrigin(0, 0.5);
     this.size = sz;
