@@ -37,15 +37,21 @@ export default class Creep {
     this.x = start.x;
     this.y = start.y;
 
-    const sz = stats.key === 'boss' ? 30 : stats.key === 'brute' ? 24 : 18;
+    const sz =
+      stats.key === 'overlord' ? 42 :
+      stats.key === 'titan'    ? 34 :
+      stats.key === 'boss'     ? 30 :
+      stats.key === 'brute'    ? 24 : 18;
     const baseColor =
-      stats.key === 'boss' ? 0xc084fc :
-      stats.key === 'brute' ? 0xfb923c :
-      stats.key === 'armored' ? 0x94a3b8 :
-      stats.key === 'fast' ? 0x5eead4 :
-      stats.key === 'swarm' ? 0xfde047 :
-      stats.key === 'archer' ? 0x86efac :
-      stats.key === 'spitter' ? 0xe879f9 :
+      stats.key === 'overlord' ? 0xff2222 :
+      stats.key === 'titan'    ? 0xff6600 :
+      stats.key === 'boss'     ? 0xc084fc :
+      stats.key === 'brute'    ? 0xfb923c :
+      stats.key === 'armored'  ? 0x94a3b8 :
+      stats.key === 'fast'     ? 0x5eead4 :
+      stats.key === 'swarm'    ? 0xfde047 :
+      stats.key === 'archer'   ? 0x86efac :
+      stats.key === 'spitter'  ? 0xe879f9 :
       CONFIG.colors.creep;
     this.baseColor = baseColor;
     // ranged = bentuk diamond, melee = lingkaran

@@ -47,12 +47,16 @@ export const CONFIG = {
       wispCost: 20, wispLumber: 1,    // tiap wisp menambah +1 lumber/wave
       incomePerLumber: 2              // tiap 1 lumber yang dibelanjakan -> +2 gold income/wave
     },
-    // pilihan creep yang bisa dikirim ke lane musuh (pakai lumber)
+    // pilihan creep yang bisa dikirim ke lane musuh (pakai lumber) — 8 variasi
     sendOptions: [
-      { key: 'basic', name: 'Basic', lumber: 1 },
-      { key: 'fast', name: 'Fast', lumber: 2 },
-      { key: 'armored', name: 'Armored', lumber: 3 },
-      { key: 'brute', name: 'Brute', lumber: 5 }
+      { key: 'basic',   name: 'Basic',   lumber: 1  },
+      { key: 'fast',    name: 'Fast',    lumber: 2  },
+      { key: 'armored', name: 'Armored', lumber: 3  },
+      { key: 'swarm',   name: 'Swarm',   lumber: 4  },
+      { key: 'brute',   name: 'Brute',   lumber: 5  },
+      { key: 'spitter', name: 'Spitter', lumber: 7  },
+      { key: 'boss',    name: 'Boss',    lumber: 10 },
+      { key: 'titan',   name: 'Titan',   lumber: 15 }
     ],
     // tingkat kesulitan AI: bonus lumber & income gold per ronde
     difficulties: {

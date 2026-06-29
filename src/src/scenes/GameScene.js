@@ -200,7 +200,7 @@ export default class GameScene extends Phaser.Scene {
   buildControlPanel() {
     const px = 452, pw = 296;
     const cx = px + pw / 2;
-    panel(this, px, 150, pw, 458, { radius: 16, fill: 0x10172c, fillAlpha: 0.92, stroke: 0x2e3a5c });
+    panel(this, px, 150, pw, 498, { radius: 16, fill: 0x10172c, fillAlpha: 0.92, stroke: 0x2e3a5c });
     const div = (y) => { const g = this.add.graphics(); g.lineStyle(1, 0x2e3a5c, 1); g.lineBetween(px + 14, y, px + pw - 14, y); };
     const h = (y, s, color) => this.add.text(cx, y, s, { fontFamily: CONFIG.fonts.heading, fontSize: '13px', color, fontStyle: 'bold' }).setOrigin(0.5, 0);
 
@@ -215,22 +215,24 @@ export default class GameScene extends Phaser.Scene {
     this.lumberInfo = this.add.text(px + 16, 296, '', { fontFamily: CONFIG.fonts.body, fontSize: '13px', color: '#c3cdee', lineSpacing: 2 });
     this.wispBtn = this.smallBtn(px + 16, 338, pw - 32, 28, '', CONFIG.colors.hpFull, () => this.buyWisp());
 
-    // --- Kirim creep ke musuh ---
+    // --- Kirim creep ke musuh (2 baris × 4 tombol) ---
     div(374);
     h(380, 'KIRIM CREEP KE MUSUH', '#fca5a5');
     this.sendBtns = [];
     const opts = CONFIG.sendOptions;
-    const sbw = (pw - 32 - (opts.length - 1) * 8) / opts.length;
+    const sbw = (pw - 32 - 3 * 8) / 4; // 4 tombol per baris
     opts.forEach((o, i) => {
-      const bx = px + 16 + i * (sbw + 8);
-      const b = this.smallBtn(bx, 400, sbw, 40, `${o.name}\n${o.lumber}⬢`, CONFIG.colors.eastUnit, () => this.buySend(o));
+      const row = Math.floor(i / 4), col = i % 4;
+      const bx = px + 16 + col * (sbw + 8);
+      const by = 400 + row * 44;
+      const b = this.smallBtn(bx, by, sbw, 36, `${o.name}\n${o.lumber}⬢`, CONFIG.colors.eastUnit, () => this.buySend(o));
       b.opt = o;
       this.sendBtns.push(b);
     });
 
     // --- Upgrade King ---
-    div(450);
-    h(456, '♚ UPGRADE KING', '#fbbf24');
+    div(490);
+    h(496, '♚ UPGRADE KING', '#fbbf24');
     this.kingBtns = [];
     const ups = [
       { type: 'hp', name: 'HP' },
@@ -240,12 +242,12 @@ export default class GameScene extends Phaser.Scene {
     const kbw = (pw - 32 - (ups.length - 1) * 8) / ups.length;
     ups.forEach((u, i) => {
       const bx = px + 16 + i * (kbw + 8);
-      const b = this.smallBtn(bx, 476, kbw, 42, '', CONFIG.colors.gold, () => this.buyKingUpgrade(u.type));
+      const b = this.smallBtn(bx, 516, kbw, 42, '', CONFIG.colors.gold, () => this.buyKingUpgrade(u.type));
       b.upType = u.type;
       b.upName = u.name;
       this.kingBtns.push(b);
     });
-    this.kingStatText = this.add.text(cx, 524, '', { fontFamily: CONFIG.fonts.body, fontSize: '12px', color: '#9aa6cc', align: 'center' }).setOrigin(0.5, 0);
+    this.kingStatText = this.add.text(cx, 564, '', { fontFamily: CONFIG.fonts.body, fontSize: '12px', color: '#9aa6cc', align: 'center' }).setOrigin(0.5, 0);
   }
 
   // tombol kecil generik -> {c, g, t, setLabel, setEnabled}
@@ -600,13 +602,26 @@ export default class GameScene extends Phaser.Scene {
     const dmgMult = this.waveDmgMult(this.wave);
     const extras = this.buildWaveExtras(this.wave); // sama untuk kedua lane
 
+    // ultimate boss: muncul di wave 15 lalu tiap 5 wave (20, 25, 30, ...)
+    const spawnOverlord = this.wave >= 15 && (this.wave - 15) % 5 === 0;
+
     for (const lane of [this.playerLane, this.enemyLane]) {
       lane.kills = 0;
       lane.path = lane.board.getPath();
-      // gabung wave dasar + creep ekstra (skala wave) + creep kiriman, lalu reset kiriman
       const all = comp.concat(extras).concat(lane.pendingSends);
       lane.queue = all.map(key => ({ key, hpMult, dmgMult }));
+      if (spawnOverlord) lane.queue.push({ key: 'overlord', hpMult, dmgMult });
       lane.pendingSends = [];
+    }
+
+    if (spawnOverlord) {
+      // notifikasi visual
+      const txt = this.add.text(CONFIG.width / 2, CONFIG.height / 2 - 60,
+        '⚠ OVERLORD DATANG!', {
+          fontFamily: CONFIG.fonts.heading, fontSize: '38px',
+          color: '#ff4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6
+        }).setOrigin(0.5).setDepth(500);
+      this.tweens.add({ targets: txt, alpha: 0, y: '-=50', duration: 2500, onComplete: () => txt.destroy() });
     }
     this.updateControlPanel(); // nonaktifkan tombol saat bertempur
     this.updateWaveInfo();
