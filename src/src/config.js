@@ -53,10 +53,10 @@ export const CONFIG = {
       { key: 'fast',    name: 'Fast',    lumber: 2  },
       { key: 'armored', name: 'Armored', lumber: 3  },
       { key: 'swarm',   name: 'Swarm',   lumber: 4  },
-      { key: 'brute',   name: 'Brute',   lumber: 5  },
-      { key: 'spitter', name: 'Spitter', lumber: 7  },
-      { key: 'boss',    name: 'Boss',    lumber: 10 },
-      { key: 'titan',   name: 'Titan',   lumber: 15 }
+      { key: 'brute',   name: 'Brute',   lumber: 6  },
+      { key: 'spitter', name: 'Spitter', lumber: 9  },
+      { key: 'boss',    name: 'Boss',    lumber: 16 },
+      { key: 'titan',   name: 'Titan',   lumber: 28 }
     ],
     // tingkat kesulitan AI: bonus lumber & income gold per ronde
     difficulties: {
