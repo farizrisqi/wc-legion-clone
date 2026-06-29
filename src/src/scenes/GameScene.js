@@ -609,9 +609,12 @@ export default class GameScene extends Phaser.Scene {
       lane.kills = 0;
       lane.path = lane.board.getPath();
       const all = comp.concat(extras).concat(lane.pendingSends);
+      if (spawnOverlord) all.push('overlord');
+      // spawn dari terkuat ke terlemah (sort HP descending)
+      all.sort((a, b) => (CREEPS[b]?.hp ?? 0) - (CREEPS[a]?.hp ?? 0));
       lane.queue = all.map(key => ({ key, hpMult, dmgMult }));
-      if (spawnOverlord) lane.queue.push({ key: 'overlord', hpMult, dmgMult });
       lane.pendingSends = [];
+
     }
 
     if (spawnOverlord) {
