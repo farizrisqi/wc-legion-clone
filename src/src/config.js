@@ -33,7 +33,7 @@ export const CONFIG = {
     },
     king: {
       hp: 2000, size: 2,            // Size 2 berarti 2x2 grid cell
-      atkDmg: 22, atkRange: 120, atkSpeed: 1.0, // King menyerang creep di dekat goal
+      atkDmg: 22, atkRange: 400, atkSpeed: 1.0, // King menyerang creep di seluruh board
       // biaya upgrade (lumber) = base * (level+1); amount = penambahan per level
       upgrades: {
         hp:     { base: 2, amount: 600 },
