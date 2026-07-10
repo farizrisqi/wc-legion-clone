@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config.js';
 import { gradientBg, panel, glow, button, heading, body } from '../ui/UI.js';
+import { music } from '../audio/Music.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -10,6 +11,19 @@ export default class MenuScene extends Phaser.Scene {
   create() {
     const cx = CONFIG.width / 2;
     gradientBg(this);
+
+    // musik mulai saat interaksi pertama (kebijakan autoplay browser)
+    this.input.on('pointerdown', () => music.start());
+    music.setMood('prep');
+
+    // tombol mute (kiri atas)
+    const muteBtn = this.add.text(20, 18, music.muted ? '🔇 Musik' : '🔊 Musik', {
+      fontFamily: CONFIG.fonts.body, fontSize: '18px', color: '#9fd0ff', fontStyle: 'bold'
+    }).setInteractive({ useHandCursor: true });
+    muteBtn.on('pointerdown', () => {
+      music.start();
+      muteBtn.setText(music.toggleMute() ? '🔇 Musik' : '🔊 Musik');
+    });
 
     // dua "lambang" legion mengapit judul
     const west = this.add.image(cx - 320, 200, 'roundsquare').setDisplaySize(70, 70).setTint(CONFIG.colors.westUnit);

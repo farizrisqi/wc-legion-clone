@@ -7,6 +7,7 @@ import Board from '../game/Board.js';
 import Creep from '../game/Creep.js';
 import King from '../game/King.js';
 import { gradientBg, panel, glow, pill } from '../ui/UI.js';
+import { music } from '../audio/Music.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -67,9 +68,10 @@ export default class GameScene extends Phaser.Scene {
     this.buildControlPanel();
     this.buildHoverHighlight();
 
-    this.input.on('pointerdown', (p) => this.onClick(p));
+    this.input.on('pointerdown', (p) => { music.start(); this.onClick(p); });
     this.input.on('pointermove', (p) => this.onMove(p));
 
+    music.start();
     this.startPrep();
   }
 
@@ -97,6 +99,13 @@ export default class GameScene extends Phaser.Scene {
     // pill fase di tengah atas
     this.phaseText = pill(this, CONFIG.width / 2 - 130, 22, 260, 40, '', CONFIG.colors.gold);
 
+    // tombol kecepatan (1× / 2×) — hanya berpengaruh saat bertempur
+    this.speedMult = 1;
+    this.speedBtn = this.smallBtn(CONFIG.width / 2 + 142, 22, 64, 40, '▶ 1×', 0x38bdf8, () => {
+      this.speedMult = this.speedMult === 1 ? 2 : 1;
+      this.speedBtn.setLabel(this.speedMult === 1 ? '▶ 1×' : '▶▶ 2×');
+    });
+
     // indikator difficulty (kanan atas)
     this.add.text(CONFIG.width - 24, 14, `AI: ${this.diff.name}`, {
       fontFamily: CONFIG.fonts.heading, fontSize: '15px', color: '#fca5a5', fontStyle: 'bold'
@@ -109,6 +118,15 @@ export default class GameScene extends Phaser.Scene {
     statsBtn.on('pointerover', () => statsBtn.setColor('#ffffff'));
     statsBtn.on('pointerout', () => statsBtn.setColor('#9fd0ff'));
     statsBtn.on('pointerdown', () => this.openStatsPopup());
+
+    // tombol mute musik (di bawah tombol stats)
+    const muteBtn = this.add.text(CONFIG.width - 24, 64, music.muted ? '🔇 Musik' : '🔊 Musik', {
+      fontFamily: CONFIG.fonts.body, fontSize: '15px', color: '#9fd0ff', fontStyle: 'bold'
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    muteBtn.on('pointerdown', () => {
+      music.start();
+      muteBtn.setText(music.toggleMute() ? '🔇 Musik' : '🔊 Musik');
+    });
 
     this.updateHUD();
   }
@@ -140,18 +158,24 @@ export default class GameScene extends Phaser.Scene {
       this.add.text(x + 56, this.shopY + 56, skillLabel, { fontFamily: CONFIG.fonts.body, fontSize: '12px', color: stats.special ? '#fbbf24' : '#6b779c' });
       const badgeX = x + bw - 16;
       this.add.text(badgeX, this.shopY + 10, `${stats.cost}g`, { fontFamily: CONFIG.fonts.heading, fontSize: '16px', color: '#fde68a', fontStyle: 'bold' }).setOrigin(1, 0);
-      // zone interaktif untuk hover tooltip
-      const zone = this.add.zone(x, this.shopY, bw, this.shopH).setOrigin(0).setInteractive();
-      zone.on('pointerover', () => this.showSkillTooltip(stats, x));
-      zone.on('pointerout', () => this.hideSkillTooltip());
+      // zone interaktif untuk hover tooltip + highlight
+      const zone = this.add.zone(x, this.shopY, bw, this.shopH).setOrigin(0).setInteractive({ useHandCursor: true });
+      zone.on('pointerover', () => {
+        this.showSkillTooltip(stats, x);
+        this.shopHoverGfx.clear();
+        this.shopHoverGfx.lineStyle(2, CONFIG.colors.accent, 0.8);
+        this.shopHoverGfx.strokeRoundedRect(x, this.shopY, bw, this.shopH, 12);
+      });
+      zone.on('pointerout', () => { this.hideSkillTooltip(); this.shopHoverGfx.clear(); });
       this.shopButtons.push({ stats, x, bw, icon });
     });
 
-    // highlight pemilihan
+    // highlight pemilihan & hover
     this.selectGfx = this.add.graphics();
+    this.shopHoverGfx = this.add.graphics();
 
-    // info kontrol
-    this.add.text(CONFIG.width / 2, this.shopY + this.shopH + 14,
+    // info kontrol (di celah antara panel tengah dan shop, jangan sampai keluar layar)
+    this.add.text(CONFIG.width / 2, this.shopY - 26,
       'Klik unit → klik petak untuk menaruh   •   Klik unit terpasang = upgrade / jual',
       { fontFamily: CONFIG.fonts.body, fontSize: '13px', color: '#6b779c' }).setOrigin(0.5, 0);
   }
@@ -194,19 +218,20 @@ export default class GameScene extends Phaser.Scene {
   buildHoverHighlight() {
     this.hoverRect = this.add.rectangle(0, 0, CONFIG.grid.cellSize - 4, CONFIG.grid.cellSize - 4, CONFIG.colors.hoverCell, 0.45)
       .setStrokeStyle(2, CONFIG.colors.accent, 0.6).setVisible(false);
+    this.rangeGfx = this.add.graphics(); // preview jangkauan unit (hover & popup)
   }
 
   // ---------- Panel kontrol tengah (info wave + lumber + kirim creep + upgrade king) ----------
   buildControlPanel() {
     const px = 452, pw = 296;
     const cx = px + pw / 2;
-    panel(this, px, 150, pw, 498, { radius: 16, fill: 0x10172c, fillAlpha: 0.92, stroke: 0x2e3a5c });
+    panel(this, px, 150, pw, 436, { radius: 16, fill: 0x10172c, fillAlpha: 0.92, stroke: 0x2e3a5c });
     const div = (y) => { const g = this.add.graphics(); g.lineStyle(1, 0x2e3a5c, 1); g.lineBetween(px + 14, y, px + pw - 14, y); };
     const h = (y, s, color) => this.add.text(cx, y, s, { fontFamily: CONFIG.fonts.heading, fontSize: '13px', color, fontStyle: 'bold' }).setOrigin(0.5, 0);
 
     // --- Info gelombang berikutnya ---
     h(158, 'GELOMBANG BERIKUTNYA', '#9fb0d8');
-    this.waveInfoText = this.add.text(px + 16, 180, '', { fontFamily: CONFIG.fonts.body, fontSize: '14px', color: '#c3cdee', lineSpacing: 2 });
+    this.waveInfoText = this.add.text(px + 16, 180, '', { fontFamily: CONFIG.fonts.body, fontSize: '13px', color: '#c3cdee', lineSpacing: 1 });
     this.incomingText = this.add.text(cx, 244, '', { fontFamily: CONFIG.fonts.body, fontSize: '13px', color: '#fca5a5', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0);
 
     // --- Lumber, Wisp, Income ---
@@ -273,7 +298,11 @@ export default class GameScene extends Phaser.Scene {
     const counts = {};
     comp.forEach(k => counts[k] = (counts[k] || 0) + 1);
     const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-    const lines = Object.keys(counts).map(k => `${counts[k]}×  ${cap(k)}  —  ${Math.round(CREEPS[k].hp * hpMult)} HP`);
+    // urut dari terkuat (sesuai urutan spawn), maks 4 baris supaya tidak menabrak section bawah
+    const keys = Object.keys(counts).sort((a, b) => CREEPS[b].hp - CREEPS[a].hp);
+    const lines = keys.slice(0, keys.length > 4 ? 3 : 4)
+      .map(k => `${counts[k]}×  ${cap(k)}  —  ${Math.round(CREEPS[k].hp * hpMult)} HP`);
+    if (keys.length > 4) lines.push(`… +${keys.length - 3} jenis lain`);
     this.waveInfoText.setText(lines.join('\n'));
 
     const inc = this.playerLane.pendingSends.length;
@@ -328,6 +357,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.phase !== 'prep' || this.playerLumber < opt.lumber) return;
     this.playerLumber -= opt.lumber;
     this.enemyLane.pendingSends.push(opt.key);
+    music.sfxSend();
     this.playerIncomeBonus += opt.lumber * CONFIG.economy.incomePerLumber;
     this.updateHUD();
     this.updateControlPanel();
@@ -381,6 +411,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.playerBoard.placeUnit(stats, this.playerFaction, cell.col, cell.row);
     this.playerGold -= stats.cost;
+    music.sfxPlace();
     this.updateHUD();
     this.highlightShop();
     this.updateControlPanel();
@@ -392,15 +423,36 @@ export default class GameScene extends Phaser.Scene {
       if (cell) {
         const px = this.playerBoard.cellToPixel(cell.col, cell.row);
         this.hoverRect.setPosition(px.x, px.y).setVisible(true);
+        this.rangeGfx.clear();
+        if (this.selectedKey && !this.playerBoard.grid[cell.row][cell.col]) {
+          // preview jangkauan + validitas petak (hijau = boleh, merah = menutup jalur)
+          const stats = UNITS[this.playerFaction][this.selectedKey];
+          const ok = this.playerBoard.canPlace(cell.col, cell.row);
+          this.hoverRect.setStrokeStyle(2, ok ? 0x4ade80 : 0xef4444, 0.9);
+          const r = stats.range * CONFIG.grid.cellSize + 8;
+          this.rangeGfx.fillStyle(CONFIG.colors.accent, 0.06);
+          this.rangeGfx.fillCircle(px.x, px.y, r);
+          this.rangeGfx.lineStyle(1.5, CONFIG.colors.accent, 0.4);
+          this.rangeGfx.strokeCircle(px.x, px.y, r);
+        } else {
+          this.hoverRect.setStrokeStyle(2, CONFIG.colors.accent, 0.6);
+        }
         return;
       }
     }
     this.hoverRect.setVisible(false);
+    if (this.rangeGfx && !this.unitPopup) this.rangeGfx.clear();
   }
 
   // ---------- Popup upgrade/jual unit ----------
   openUnitPopup(cell, unit) {
     this.closeUnitPopup();
+    // tampilkan jangkauan serang unit yang dipilih
+    this.rangeGfx.clear();
+    this.rangeGfx.fillStyle(this.playerColor, 0.06);
+    this.rangeGfx.fillCircle(unit.x, unit.y, unit.rangePx());
+    this.rangeGfx.lineStyle(1.5, this.playerColor, 0.45);
+    this.rangeGfx.strokeCircle(unit.x, unit.y, unit.rangePx());
     const hasSkill = !!unit.stats.special;
     const w = 220, h = hasSkill ? 172 : 152;
     let x = Phaser.Math.Clamp(unit.x - w / 2, 8, CONFIG.width - w - 8);
@@ -450,6 +502,7 @@ export default class GameScene extends Phaser.Scene {
     if (!this.unitPopup) return;
     this.unitPopup.objs.forEach(o => o.destroy());
     this.unitPopup = null;
+    if (this.rangeGfx) this.rangeGfx.clear();
   }
 
   // ---------- Popup statistik unit (kita & lawan) ----------
@@ -531,6 +584,7 @@ export default class GameScene extends Phaser.Scene {
     if (!unit.canUpgrade() || this.playerGold < cost) return;
     this.playerGold -= cost;
     unit.upgradeTier();
+    music.sfxUpgrade();
     this.updateHUD();
     this.updateControlPanel();
     this.openUnitPopup(cell, unit); // refresh tampilan popup (tier/biaya baru)
@@ -541,6 +595,7 @@ export default class GameScene extends Phaser.Scene {
     const { cell } = this.unitPopup;
     const refund = this.playerBoard.sellUnit(cell.col, cell.row);
     this.playerGold += refund;
+    music.sfxSell();
     this.closeUnitPopup();
     this.updateHUD();
     this.highlightShop();
@@ -551,6 +606,7 @@ export default class GameScene extends Phaser.Scene {
   startPrep() {
     this.phase = 'prep';
     this.timer = CONFIG.timings.prepPhase;
+    music.setMood('prep');
 
     // hidupkan kembali semua unit (yang mati saat bertempur) dengan HP penuh
     for (const u of this.playerBoard.units) u.respawn();
@@ -597,6 +653,8 @@ export default class GameScene extends Phaser.Scene {
     this.phase = 'fight';
     this.spawnTimer = 0;
     this.closeUnitPopup();
+    music.setMood('fight');
+    music.sfxWave();
     const comp = this.getWaveComposition(this.wave);
     const hpMult = this.waveHpMult(this.wave);
     const dmgMult = this.waveDmgMult(this.wave);
@@ -614,8 +672,14 @@ export default class GameScene extends Phaser.Scene {
       all.sort((a, b) => (CREEPS[b]?.hp ?? 0) - (CREEPS[a]?.hp ?? 0));
       lane.queue = all.map(key => ({ key, hpMult, dmgMult }));
       lane.pendingSends = [];
-
     }
+
+    // banner singkat penanda wave mulai
+    const banner = this.add.text(CONFIG.width / 2, CONFIG.height / 2 - 130, `⚔ WAVE ${this.wave}`, {
+      fontFamily: CONFIG.fonts.heading, fontSize: '32px', color: '#7dd3fc', fontStyle: 'bold',
+      stroke: '#04101f', strokeThickness: 5
+    }).setOrigin(0.5).setDepth(400).setAlpha(0);
+    this.tweens.add({ targets: banner, alpha: 1, duration: 250, yoyo: true, hold: 900, onComplete: () => banner.destroy() });
 
     if (spawnOverlord) {
       // notifikasi visual
@@ -765,9 +829,12 @@ export default class GameScene extends Phaser.Scene {
   update(time, delta) {
     if (this.gameOver) return;
 
+    // kecepatan 2× hanya berlaku saat fase bertempur
+    const d = this.phase === 'fight' ? delta * this.speedMult : delta;
+
     // King menyerang creep di lane-nya + regenerasi HP (kedua fase)
-    this.playerKing.update(delta, this.playerLane.creeps);
-    this.enemyKing.update(delta, this.enemyLane.creeps);
+    this.playerKing.update(d, this.playerLane.creeps);
+    this.enemyKing.update(d, this.enemyLane.creeps);
 
     if (this.phase === 'prep') {
       this.timer -= delta;
@@ -778,7 +845,7 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.phase === 'fight') {
       this.phaseText.setText(`WAVE ${this.wave} — BERTEMPUR`);
-      this.spawnTimer -= delta;
+      this.spawnTimer -= d;
       const spawnedThisFrame = this.spawnTimer <= 0;
       if (spawnedThisFrame) this.spawnTimer = CONFIG.timings.fightSpawnDelay;
 
@@ -791,10 +858,10 @@ export default class GameScene extends Phaser.Scene {
           lane.creeps.push(new Creep(this, lane.board, CREEPS[item.key], spawnPath, item.hpMult, item.dmgMult));
         }
         // update unit (attack)
-        for (const u of lane.board.units) u.update(delta, lane.creeps);
+        for (const u of lane.board.units) u.update(d, lane.creeps);
         // update creep (move)
         for (const c of lane.creeps) {
-          const leaked = c.update(delta);
+          const leaked = c.update(d);
           if (leaked) lane.king.takeDamage(c.leakDmg);
         }
         // bersihkan creep mati, beri bounty (yang mati bukan karena leak)
@@ -826,6 +893,8 @@ export default class GameScene extends Phaser.Scene {
 
   endGame(win) {
     this.gameOver = true;
+    music.setMood('prep');
+    if (win) music.sfxWin(); else music.sfxLose();
     const cx = CONFIG.width / 2, cy = CONFIG.height / 2;
     this.add.rectangle(cx, cy, CONFIG.width, CONFIG.height, 0x05080f, 0.78);
 

@@ -10,9 +10,10 @@ export const CREEPS = {
     fast:    { key: 'fast',    hp: 40,   speed: 150, armor: 0,  bounty: 3,   leakDmg: 40,  dmg: 6,  atkSpeed: 1.4, range: 2 },
     archer:  { key: 'archer',  hp: 65,   speed: 85,  armor: 0,  bounty: 4,   leakDmg: 50,  dmg: 10, atkSpeed: 1.1, range: 2 },
     spitter: { key: 'spitter', hp: 80,   speed: 70,  armor: 3,  bounty: 5,   leakDmg: 55,  dmg: 14, atkSpeed: 0.8, range: 2 },
-    boss:    { key: 'boss',    hp: 700,  speed: 50,  armor: 18, bounty: 30,  leakDmg: 200, dmg: 40, atkSpeed: 1.0, range: 2 },
+    // resist: true = tahan CC (slow 50% lebih lemah, root 50% lebih singkat)
+    boss:    { key: 'boss',    hp: 700,  speed: 50,  armor: 18, bounty: 30,  leakDmg: 200, dmg: 40, atkSpeed: 1.0, range: 2, resist: true },
     // SUPER UNIT (bisa dikirim, jauh lebih kuat dari boss)
-    titan:   { key: 'titan',   hp: 2000, speed: 42,  armor: 22, bounty: 80,  leakDmg: 400, dmg: 55, atkSpeed: 0.8, range: 2 },
+    titan:   { key: 'titan',   hp: 2000, speed: 42,  armor: 22, bounty: 80,  leakDmg: 400, dmg: 55, atkSpeed: 0.8, range: 2, resist: true },
     // ULTIMATE BOSS (muncul otomatis di wave 15, 20, 25, ...)
-    overlord:{ key: 'overlord',hp: 5000, speed: 35,  armor: 30, bounty: 150, leakDmg: 800, dmg: 70, atkSpeed: 0.7, range: 2 }
+    overlord:{ key: 'overlord',hp: 5000, speed: 35,  armor: 30, bounty: 150, leakDmg: 800, dmg: 70, atkSpeed: 0.7, range: 2, resist: true }
   };

@@ -214,8 +214,8 @@ export default class Unit {
     else if (sp === 'curse')    target.applyCurse(8, 3000);
     else if (sp === 'pulverize' && Math.random() < 0.4) target.applySlow(0.5, 3000);
     else if (sp === 'devour') {
-      // heal unit sebesar 25% dari dmg didealt
-      this.hp = Math.min(this.maxHp, this.hp + this.dmg * 0.25);
+      // heal unit sebesar 35% dari dmg didealt
+      this.hp = Math.min(this.maxHp, this.hp + this.dmg * 0.35);
       const pct = this.hp / this.maxHp;
       this.hpBarBg.setVisible(true);
       this.hpBar.setVisible(pct < 1).width = this.hpBarW * pct;

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CONFIG } from '../config.js';
 import { UNITS, RACES, SKILL_DESC } from '../data/unit.js';
 import { gradientBg, glow, heading, body } from '../ui/UI.js';
+import { music } from '../audio/Music.js';
 
 export default class FactionScene extends Phaser.Scene {
   constructor() {
@@ -15,6 +16,7 @@ export default class FactionScene extends Phaser.Scene {
   create() {
     const cx = CONFIG.width / 2;
     gradientBg(this);
+    this.input.on('pointerdown', () => music.start());
 
     heading(this, cx, 70, 'PILIH RAS-MU', 44, '#ffffff');
     body(this, cx, 116, 'Tiap ras punya 5 unit. AI akan memakai ras lain secara acak.', 17, '#8b97bd').setOrigin(0.5);

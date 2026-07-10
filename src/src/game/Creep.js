@@ -63,6 +63,8 @@ export default class Creep {
   }
 
   applySlow(factor, duration) {
+    // boss/titan/overlord tahan CC: efek slow setengahnya
+    if (this.stats.resist) { factor *= 0.5; duration *= 0.5; }
     this.slowFactor = 1 - factor;
     this.slowTimer = duration;
   }
@@ -73,6 +75,8 @@ export default class Creep {
   }
 
   applyRoot(duration) {
+    // boss/titan/overlord tahan CC: durasi root setengahnya
+    if (this.stats.resist) duration *= 0.5;
     this.rootTimer = Math.max(this.rootTimer, duration);
   }
 
